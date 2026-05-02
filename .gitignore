@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+*/.pytest_cache/
+dist/
+build/
+
+# Artifacts (model files — too large for git)
+artifacts/
+**/artifacts/*.onnx
+**/artifacts/*.quant.onnx
+**/artifacts/resnet50_pytorch/
+
+# Claude local settings
+.claude/
+
+# Nested repo (cloned separately)
+AIE494-Project/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
