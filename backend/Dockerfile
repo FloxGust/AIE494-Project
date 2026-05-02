@@ -6,7 +6,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
-COPY artifacts/ ./artifacts/
+COPY models/ ./models/
 
-EXPOSE 6767
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "6767"]
+RUN mkdir -p artifacts && \
+    python models/download_model.py && \
+    python models/convert_onnx.py && \
+    python models/quantize.py
+
+EXPOSE 7860
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
