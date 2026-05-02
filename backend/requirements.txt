@@ -3,6 +3,7 @@ torchvision
 transformers
 Pillow
 onnx
+onnxscript
 onnxruntime
 fastapi
 uvicorn[standard]
