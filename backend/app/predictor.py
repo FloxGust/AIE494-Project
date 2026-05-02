@@ -2,9 +2,9 @@ import time
 import numpy as np
 import onnxruntime as ort
 from PIL import Image
-from transformers import AutoFeatureExtractor, ResNetForImageClassification
+from transformers import AutoImageProcessor, ResNetForImageClassification
 
-EXTRACTOR = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
+EXTRACTOR = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
 _model_config = ResNetForImageClassification.from_pretrained("artifacts/resnet50_pytorch").config
 ID2LABEL = _model_config.id2label
 

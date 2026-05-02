@@ -3,12 +3,12 @@ import time
 import numpy as np
 import torch
 import onnxruntime as ort
-from transformers import AutoFeatureExtractor, ResNetForImageClassification
+from transformers import AutoImageProcessor, ResNetForImageClassification
 from PIL import Image
 
 RUNS = 50
 DUMMY_IMAGE = Image.fromarray(np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8))
-extractor = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
+extractor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
 inputs_pt = extractor(images=DUMMY_IMAGE, return_tensors="pt")
 inputs_np = extractor(images=DUMMY_IMAGE, return_tensors="np")
 
