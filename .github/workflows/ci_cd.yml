@@ -20,6 +20,14 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
+      - name: Prepare model artifacts
+        run: |
+          cd backend
+          mkdir -p artifacts
+          python models/download_model.py
+          python models/convert_onnx.py
+          python models/quantize.py
+
       - name: Run tests
         run: |
           cd backend
