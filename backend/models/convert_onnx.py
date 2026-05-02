@@ -13,6 +13,7 @@ torch.onnx.export(
     input_names=["pixel_values"],
     output_names=["logits"],
     dynamic_axes={"pixel_values": {0: "batch_size"}},
-    opset_version=14,
+    opset_version=17,
+    dynamo=False,
 )
 print("Exported to artifacts/resnet50.onnx")
