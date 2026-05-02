@@ -2,15 +2,22 @@ services:
   backend:
     build: ./backend
     ports:
-      - "6767:6767"
-    volumes:
-      - ./artifacts:/app/artifacts
+      - "6767:7860"
     env_file:
       - .env
+    volumes:
+      - ./backend/app:/app/app
+      - ./Results:/Results
+    command: uvicorn app.main:app --host 0.0.0.0 --port 7860 --reload
 
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:6767
     depends_on:
       - backend
