@@ -10,6 +10,22 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: classifier
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/classifier
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +46,19 @@ jobs:
           python models/download_model.py
           python models/convert_onnx.py
           python models/quantize.py
+
+      - name: Create database tables
+        run: |
+          cd backend
+          PYTHONPATH=. python -c "
+          import asyncio
+          from app.database import engine
+          from app.models import Base
+          async def init():
+              async with engine.begin() as conn:
+                  await conn.run_sync(Base.metadata.create_all)
+          asyncio.run(init())
+          "
 
       - name: Run tests
         run: |
