@@ -29,7 +29,7 @@ def _softmax(x: np.ndarray) -> np.ndarray:
     return e_x / e_x.sum()
 
 
-def predict(image: Image.Image, model_type: str = "quantized", file_name: str = "") -> dict:
+def predict(image: Image.Image, model_type: str = "quantized", file_name: str = "", file_size_bytes: int = 0) -> dict:
     inputs = EXTRACTOR(images=image, return_tensors="np")
     pixel_values = inputs["pixel_values"].astype(np.float32)
 
@@ -57,8 +57,12 @@ def predict(image: Image.Image, model_type: str = "quantized", file_name: str = 
         elapsed_ms = (time.perf_counter() - start) * 1000
         logits = outputs[0][0]
 
-    predicted_id = int(np.argmax(logits))
-    confidence = float(_softmax(logits)[predicted_id])
+    probs = _softmax(logits)
+    predicted_id = int(np.argmax(probs))
+    confidence = float(probs[predicted_id])
+
+    top5_ids = np.argsort(probs)[::-1][:5]
+    top5 = [[ID2LABEL.get(int(i), str(i)), round(float(probs[i]) * 100, 2)] for i in top5_ids]
 
     return {
         "label": ID2LABEL.get(predicted_id, str(predicted_id)),
@@ -67,4 +71,6 @@ def predict(image: Image.Image, model_type: str = "quantized", file_name: str = 
         "model_used": model_type,
         "model_size_mb": MODEL_SIZE_MB[model_type],
         "file_name": file_name,
+        "file_size_bytes": file_size_bytes,
+        "top5": top5,
     }

@@ -9,5 +9,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 pydantic
+sqlalchemy[asyncio]
+asyncpg
 pytest
 httpx
