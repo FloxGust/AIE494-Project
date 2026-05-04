@@ -1,6 +1,7 @@
 import io
 import json
 import pathlib
+import uuid
 from concurrent.futures import ProcessPoolExecutor
 from typing import Annotated
 
@@ -69,21 +70,26 @@ async def predict_endpoint(
     loop = __import__("asyncio").get_event_loop()
     result = await loop.run_in_executor(executor, predict, image, model, file.filename or "", len(data))
 
-    record = Classification(
-        filename=result["file_name"],
-        stored_path="",
-        file_size=result["file_size_bytes"],
-        label=result["label"],
-        confidence=round(result["confidence"] * 100, 2),
-        model=result["model_used"],
-        infer_ms=result["inference_time_ms"],
-        top5=result["top5"],
-    )
-    db.add(record)
-    await db.commit()
-    await db.refresh(record)
+    record_id = str(uuid.uuid4())
+    try:
+        record = Classification(
+            filename=result["file_name"],
+            stored_path="",
+            file_size=result["file_size_bytes"],
+            label=result["label"],
+            confidence=round(result["confidence"] * 100, 2),
+            model=result["model_used"],
+            infer_ms=result["inference_time_ms"],
+            top5=result["top5"],
+        )
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
+        record_id = str(record.id)
+    except Exception:
+        pass
 
-    return PredictionResponse(**result, id=str(record.id))
+    return PredictionResponse(**result, id=record_id)
 
 
 @app.get("/classifications")
@@ -92,11 +98,14 @@ async def get_classifications(
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
 ):
-    rows = (
-        await db.execute(
-            select(Classification).order_by(desc(Classification.created_at)).offset(skip).limit(limit)
-        )
-    ).scalars().all()
+    try:
+        rows = (
+            await db.execute(
+                select(Classification).order_by(desc(Classification.created_at)).offset(skip).limit(limit)
+            )
+        ).scalars().all()
+    except Exception:
+        return []
 
     return [
         {
