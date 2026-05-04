@@ -37,6 +37,11 @@ RESULTS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "Results"
 ModelType = Annotated[str, Query(pattern="^(original|onnx|quantized)$")]
 
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "docs": "/docs"}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
