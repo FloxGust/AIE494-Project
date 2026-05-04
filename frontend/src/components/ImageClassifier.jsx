@@ -1,5 +1,10 @@
 import { useState, useRef } from "react";
-import { MODEL_INFO } from "../data/mockResults";
+
+const MODEL_INFO = {
+  original:  { name: "PyTorch",        size: "~97 MB" },
+  onnx:      { name: "ONNX",           size: "~97 MB" },
+  quantized: { name: "Quantized ONNX", size: "~24 MB" },
+};
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:6767";
 
@@ -123,7 +128,7 @@ export default function ImageClassifier({ onNavigate }) {
             </p>
           </div>
           <button className="nav-link" onClick={() => onNavigate("results")}>
-            View batch results →
+            View results →
           </button>
         </div>
 
@@ -149,7 +154,7 @@ export default function ImageClassifier({ onNavigate }) {
         <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem" }}>
           {[
             ["Size", MODEL_INFO[model].size],
-            ["Format", model === "pytorch" ? "PyTorch" : model === "onnx" ? "ONNX .onnx" : "ONNX Int8"],
+            ["Format", model === "original" ? "PyTorch .safetensors" : model === "onnx" ? "ONNX .onnx" : "ONNX Int8"],
             ["Device", "CPU"],
           ].map(([k, v]) => (
             <div key={k} style={{
@@ -198,7 +203,7 @@ export default function ImageClassifier({ onNavigate }) {
                   <>
                     <div style={{ color: "var(--text-tertiary)" }}><ImageIcon /></div>
                     <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Drop image or click to upload</span>
-                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>JPG · PNG · WEBP · max 10 MB</span>
+                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>JPG · PNG · WEBP · max 5 MB</span>
                   </>
                 )}
               </div>
@@ -245,14 +250,6 @@ export default function ImageClassifier({ onNavigate }) {
 
             {!loading && result && (
               <div className="card-anim" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 500, padding: "2px 10px", borderRadius: 99 }}>
-                    ✓ Saved
-                  </span>
-                  <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {result.id}
-                  </span>
-                </div>
                 <div>
                   <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 4 }}>Predicted label</div>
                   <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: "-0.3px", color: "var(--text-primary)" }}>
@@ -295,6 +292,14 @@ export default function ImageClassifier({ onNavigate }) {
                       <span style={{ fontSize: 11, color: "var(--text-tertiary)", fontFamily: "var(--font-mono)", minWidth: 38, textAlign: "right" }}>{pct.toFixed(1)}%</span>
                     </div>
                   ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 500, padding: "2px 10px", borderRadius: 99 }}>
+                    ✓ Saved
+                  </span>
+                  <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {result.id}
+                  </span>
                 </div>
               </div>
             )}

@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +35,7 @@ executor = ProcessPoolExecutor(max_workers=4)
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 RESULTS_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "Results"
+IMAGES_DIR = pathlib.Path(__file__).resolve().parent / "images"
 
 ModelType = Annotated[str, Query(pattern="^(original|onnx|quantized)$")]
 
@@ -46,6 +48,15 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/images/{record_id}")
+async def get_image(record_id: str):
+    for ext in ("jpg", "png", "webp", "gif", "bmp", "jpeg"):
+        path = IMAGES_DIR / f"{record_id}.{ext}"
+        if path.exists():
+            return FileResponse(str(path))
+    raise HTTPException(status_code=404, detail="Image not found")
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -70,11 +81,20 @@ async def predict_endpoint(
     loop = __import__("asyncio").get_event_loop()
     result = await loop.run_in_executor(executor, predict, image, model, file.filename or "", len(data))
 
-    record_id = str(uuid.uuid4())
+    record_uuid = uuid.uuid4()
+    record_id = str(record_uuid)
+
+    ext = (file.content_type or "image/jpeg").split("/")[-1].lower()
+    if ext == "jpeg":
+        ext = "jpg"
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    (IMAGES_DIR / f"{record_id}.{ext}").write_bytes(data)
+
     try:
         record = Classification(
+            id=record_uuid,
             filename=result["file_name"],
-            stored_path="",
+            stored_path=f"/images/{record_id}.{ext}",
             file_size=result["file_size_bytes"],
             label=result["label"],
             confidence=round(result["confidence"] * 100, 2),
@@ -85,7 +105,6 @@ async def predict_endpoint(
         db.add(record)
         await db.commit()
         await db.refresh(record)
-        record_id = str(record.id)
     except Exception:
         pass
 

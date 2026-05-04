@@ -1,0 +1,8 @@
+{
+  "id": "864f444c-8dc8-4b58-9cb3-bba70d9d736a",
+  "model": "onnx",
+  "size_mb": 97.43,
+  "latency_ms": 9.25,
+  "runs": 50,
+  "timestamp": "2026-05-02T20:20:07.444654"
+}

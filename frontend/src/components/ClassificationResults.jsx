@@ -1,10 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
-import { CATEGORY_COLORS } from "../data/mockResults";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:6767";
 
+const PALETTE = ["#a78bfa","#f59e0b","#34d399","#38bdf8","#fb923c","#f472b6","#818cf8","#4ade80"];
+const getCategoryColor = (cat) => {
+  let h = 0;
+  for (let i = 0; i < (cat || "").length; i++) h = (h * 31 + cat.charCodeAt(i)) >>> 0;
+  return PALETTE[h % PALETTE.length];
+};
+
 const ImagePlaceholder = ({ category }) => {
-  const bg = CATEGORY_COLORS[category] || "#D3D1C7";
+  const bg = getCategoryColor(category);
   return (
     <div style={{ width: "100%", height: "100%", background: bg + "22", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={bg} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -13,6 +19,19 @@ const ImagePlaceholder = ({ category }) => {
         <polyline points="21 15 16 10 5 21"/>
       </svg>
     </div>
+  );
+};
+
+const ImageWithFallback = ({ id, label, objectFit = "cover" }) => {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <ImagePlaceholder category={label} />;
+  return (
+    <img
+      src={`${API_URL}/images/${id}`}
+      alt={label}
+      style={{ width: "100%", height: "100%", objectFit }}
+      onError={() => setFailed(true)}
+    />
   );
 };
 
@@ -162,7 +181,7 @@ export default function ClassificationResults({ onNavigate }) {
                 onClick={() => toggleSelect(r.id)}
               >
                 <div style={{ height: 130, position: "relative", overflow: "hidden" }}>
-                  <ImagePlaceholder category={r.category} />
+                  <ImageWithFallback id={r.id} label={r.label} />
                   <div style={{ position: "absolute", top: 8, right: 8 }}>
                     <ConfBadge conf={r.conf} />
                   </div>
@@ -189,8 +208,8 @@ export default function ClassificationResults({ onNavigate }) {
         {/* Detail panel */}
         {selected && (
           <aside className="card-anim" style={{ width: 400, flexShrink: 0, position: "sticky", top: "2rem", background: "var(--bg-surface)", border: "1px solid var(--border-md)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-            <div style={{ height: 250, background: (CATEGORY_COLORS[selected.category] || "#D3D1C7") + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ImagePlaceholder category={selected.category} />
+            <div style={{ height: 250, overflow: "hidden" }}>
+              <ImageWithFallback id={selected.id} label={selected.label} />
             </div>
             <div style={{ padding: "1rem" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>

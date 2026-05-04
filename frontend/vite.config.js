@@ -12,5 +12,6 @@ export default defineConfig({
     hmr: {
       host: "localhost",
     },
+    allowedHosts: ["aie494.paiac.store"],
   },
 });

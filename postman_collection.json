@@ -1,0 +1,418 @@
+{
+  "info": {
+    "name": "AIE494 - Image Classification API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:6767",
+      "type": "string"
+    },
+    {
+      "key": "hf_url",
+      "value": "https://fias1h-aie494-api.hf.space",
+      "type": "string"
+    },
+    {
+      "key": "record_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has status field', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('status');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns ok', () => {",
+                  "  pm.expect(pm.response.json().status).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prediction",
+      "item": [
+        {
+          "name": "Predict — Quantized ONNX (default)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/predict",
+              "host": ["{{base_url}}"],
+              "path": ["predict"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Image file (JPG/PNG/WEBP, max 5MB)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has required fields', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.all.keys('id','label','confidence','inference_time_ms','model_used','model_size_mb','file_name','file_size_bytes','top5');",
+                  "});",
+                  "pm.test('Confidence is 0-1', () => {",
+                  "  const c = pm.response.json().confidence;",
+                  "  pm.expect(c).to.be.within(0, 1);",
+                  "});",
+                  "pm.test('top5 has 5 entries', () => {",
+                  "  pm.expect(pm.response.json().top5).to.have.lengthOf(5);",
+                  "});",
+                  "const id = pm.response.json().id;",
+                  "if (id) pm.collectionVariables.set('record_id', id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict — Original PyTorch",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/predict?model=original",
+              "host": ["{{base_url}}"],
+              "path": ["predict"],
+              "query": [{ "key": "model", "value": "original" }]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Image file (JPG/PNG/WEBP, max 5MB)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('model_used is original', () => {",
+                  "  pm.expect(pm.response.json().model_used).to.eql('original');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict — ONNX",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/predict?model=onnx",
+              "host": ["{{base_url}}"],
+              "path": ["predict"],
+              "query": [{ "key": "model", "value": "onnx" }]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Image file (JPG/PNG/WEBP, max 5MB)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('model_used is onnx', () => {",
+                  "  pm.expect(pm.response.json().model_used).to.eql('onnx');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict — Error: Non-image file",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/predict",
+              "host": ["{{base_url}}"],
+              "path": ["predict"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "ส่งไฟล์ .txt หรือ .pdf เพื่อทดสอบ"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Has detail message', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('detail');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Predict — Error: Invalid model param",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/predict?model=invalid",
+              "host": ["{{base_url}}"],
+              "path": ["predict"],
+              "query": [{ "key": "model", "value": "invalid" }]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Classifications",
+      "item": [
+        {
+          "name": "Get All Classifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/classifications",
+              "host": ["{{base_url}}"],
+              "path": ["classifications"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns array', () => {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Classifications — Paginated",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/classifications?skip=0&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["classifications"],
+              "query": [
+                { "key": "skip",  "value": "0"  },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Max 10 results', () => {",
+                  "  pm.expect(pm.response.json().length).to.be.at.most(10);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Images",
+      "item": [
+        {
+          "name": "Get Image by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/images/{{record_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["images", "{{record_id}}"],
+              "description": "record_id ถูก set อัตโนมัติหลัง POST /predict สำเร็จ"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 404', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Content-Type is image', () => {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('image/');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Image — Error: Not Found",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/images/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["images", "00000000-0000-0000-0000-000000000000"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Results",
+      "item": [
+        {
+          "name": "Get Benchmark Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/results",
+              "host": ["{{base_url}}"],
+              "path": ["results"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has model keys', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.all.keys('original','onnx','quantized');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
