@@ -3,10 +3,10 @@ import { useState, useRef } from "react";
 const MODEL_INFO = {
   original:  { name: "PyTorch",        size: "~97 MB" },
   onnx:      { name: "ONNX",           size: "~97 MB" },
-  quantized: { name: "Quantized ONNX", size: "~24 MB" },
+  quantized: { name: "Quantized ONNX", size: "~91 MB" },
 };
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:6767";
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 const UploadIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -40,6 +40,7 @@ export default function ImageClassifier({ onNavigate }) {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
   const fileRef = useRef();
 
   const handleFile = (f) => {
@@ -56,8 +57,6 @@ export default function ImageClassifier({ onNavigate }) {
     const f = e.dataTransfer.files[0];
     if (f && f.type.startsWith("image/")) handleFile(f);
   };
-
-  const [error, setError] = useState(null);
 
   const classify = async () => {
     if (!file) return;
@@ -99,11 +98,12 @@ export default function ImageClassifier({ onNavigate }) {
   const confColor = (c) => c >= 80 ? "var(--conf-high-text)" : c >= 50 ? "var(--conf-mid-text)" : "var(--conf-low-text)";
 
   return (
-    <div style={{ minHeight: "100vh", padding: "2rem 1.5rem" }}>
+    <div className="page-wrap">
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         .card-anim { animation: fadeIn 0.3s ease forwards; }
+        .page-wrap { min-height: 100vh; padding: 2rem 1.5rem; }
         .tab-btn { padding: 7px 18px; font-size: 13px; border-radius: 99px; border: 1px solid var(--border-md); background: transparent; color: var(--text-secondary); transition: all .15s; }
         .tab-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
         .tab-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 500; }
@@ -112,15 +112,25 @@ export default function ImageClassifier({ onNavigate }) {
         .classify-btn { padding: 10px 24px; background: var(--accent); color: var(--accent-text); border: none; border-radius: 99px; font-size: 14px; font-weight: 500; transition: opacity .15s; }
         .classify-btn:hover { opacity: 0.85; }
         .classify-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .nav-link { background: none; border: 1px solid var(--border-md); color: var(--text-secondary); padding: 6px 14px; border-radius: 99px; font-size: 12px; transition: all .15s; }
+        .nav-link { background: none; border: 1px solid var(--border-md); color: var(--text-secondary); padding: 6px 14px; border-radius: 99px; font-size: 12px; transition: all .15s; white-space: nowrap; }
         .nav-link:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .classifier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .model-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .drop-zone-inner { height: 260px; }
+        @media (max-width: 600px) {
+          .page-wrap { padding: 1.25rem 1rem; }
+          .classifier-grid { grid-template-columns: 1fr; }
+          .classifier-title { font-size: 20px !important; }
+          .drop-zone-inner { height: 200px; }
+          .tab-btn { padding: 6px 12px; font-size: 12px; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
-          <div>
-            <h1 style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.5px", color: "var(--text-primary)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 className="classifier-title" style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.5px", color: "var(--text-primary)" }}>
               Image Classifier
             </h1>
             <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 4 }}>
@@ -137,7 +147,7 @@ export default function ImageClassifier({ onNavigate }) {
           <p style={{ fontSize: 11, color: "var(--text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
             Model
           </p>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="model-tabs">
             {Object.entries(MODEL_INFO).map(([key, info]) => (
               <button
                 key={key}
@@ -151,9 +161,9 @@ export default function ImageClassifier({ onNavigate }) {
         </div>
 
         {/* Model info strip */}
-        <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap" }}>
           {[
-            ["Size", MODEL_INFO[model].size],
+            ["Model Size", MODEL_INFO[model].size],
             ["Format", model === "original" ? "PyTorch .safetensors" : model === "onnx" ? "ONNX .onnx" : "ONNX Int8"],
             ["Device", "CPU"],
           ].map(([k, v]) => (
@@ -167,8 +177,8 @@ export default function ImageClassifier({ onNavigate }) {
           ))}
         </div>
 
-        {/* Main grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        {/* Main grid — stacks to 1 col on mobile */}
+        <div className="classifier-grid">
           {/* Upload */}
           <div>
             <div
@@ -177,8 +187,8 @@ export default function ImageClassifier({ onNavigate }) {
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileRef.current.click()}
             >
-              <div style={{
-                height: 260, display: "flex", flexDirection: "column",
+              <div className="drop-zone-inner" style={{
+                display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 12,
                 position: "relative", overflow: "hidden",
                 background: preview ? "transparent" : "var(--bg-surface)",
@@ -191,7 +201,6 @@ export default function ImageClassifier({ onNavigate }) {
                       display: "flex", flexDirection: "column", alignItems: "center",
                       justifyContent: "center", gap: 8, opacity: 0, transition: "opacity .2s",
                     }}
-                      className="drop-hover-overlay"
                       onMouseEnter={e => e.currentTarget.style.opacity = 1}
                       onMouseLeave={e => e.currentTarget.style.opacity = 0}
                     >
@@ -220,7 +229,7 @@ export default function ImageClassifier({ onNavigate }) {
             </div>
           </div>
 
-          {/* Result */}
+          {/* Result — below input on mobile, right side on desktop */}
           <div style={{
             background: "var(--bg-surface)", border: "1px solid var(--border)",
             borderRadius: "var(--radius-lg)", padding: "1.25rem",
@@ -233,7 +242,7 @@ export default function ImageClassifier({ onNavigate }) {
               </div>
             )}
 
-            {!loading && !result && (
+            {!loading && !result && !error && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, opacity: 0.35 }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>

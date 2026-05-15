@@ -13,5 +13,11 @@ export default defineConfig({
       host: "localhost",
     },
     allowedHosts: ["aie494.paiac.store"],
+    proxy: {
+      "/predict": process.env.BACKEND_URL || "http://localhost:6767",
+      "/classifications": process.env.BACKEND_URL || "http://localhost:6767",
+      "/images": process.env.BACKEND_URL || "http://localhost:6767",
+      "/results": process.env.BACKEND_URL || "http://localhost:6767",
+    },
   },
 });

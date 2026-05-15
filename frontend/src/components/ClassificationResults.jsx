@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:6767";
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 const PALETTE = ["#a78bfa","#f59e0b","#34d399","#38bdf8","#fb923c","#f472b6","#818cf8","#4ade80"];
 const getCategoryColor = (cat) => {
@@ -70,6 +70,11 @@ export default function ClassificationResults({ onNavigate }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = selectedId ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [selectedId]);
+
   const filtered = useMemo(() => {
     let data = [...results];
     if (filter === "high") data = data.filter((r) => r.conf >= 80);
@@ -93,6 +98,7 @@ export default function ClassificationResults({ onNavigate }) {
     <div style={{ minHeight: "100vh", padding: "2rem 1.5rem" }}>
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes modalIn { from { opacity:0; transform:scale(0.96) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
         .card-anim { animation: fadeIn 0.25s ease forwards; }
         .result-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; cursor: pointer; transition: border-color .15s, transform .12s; }
         .result-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
@@ -100,124 +106,134 @@ export default function ClassificationResults({ onNavigate }) {
         .filter-btn { padding: 5px 14px; font-size: 12px; border-radius: 99px; border: 1px solid var(--border-md); background: transparent; color: var(--text-secondary); transition: all .12s; }
         .filter-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
         .filter-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 500; }
-        .nav-link { background: none; border: 1px solid var(--border-md); color: var(--text-secondary); padding: 6px 14px; border-radius: 99px; font-size: 12px; transition: all .15s; }
+        .nav-link { background: none; border: 1px solid var(--border-md); color: var(--text-secondary); padding: 6px 14px; border-radius: 99px; font-size: 12px; transition: all .15s; white-space: nowrap; }
         .nav-link:hover { background: var(--bg-hover); color: var(--text-primary); }
         .sort-select { font-size: 12px; padding: 5px 10px; border: 1px solid var(--border-md); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-secondary); font-family: var(--font-sans); cursor: pointer; outline: none; }
-        .close-btn { background: none; border: 1px solid var(--border-md); color: var(--text-tertiary); padding: 4px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all .12s; }
+        .close-btn { background: none; border: 1px solid var(--border-md); color: var(--text-tertiary); padding: 4px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0; }
         .close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .modal-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; padding: 1rem; animation: fadeIn 0.2s ease forwards; }
+        .modal-box { width: 100%; max-width: 420px; background: var(--bg-surface); border: 1px solid var(--border-md); border-radius: var(--radius-lg); overflow: hidden; max-height: 90vh; overflow-y: auto; animation: modalIn 0.22s ease forwards; }
+        @media (max-width: 600px) {
+          .results-page { padding: 1.25rem 1rem !important; }
+          .results-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+          .results-title { font-size: 20px !important; }
+          .modal-box { max-height: 85vh; }
+        }
       `}</style>
 
-      <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
-        {/* Container */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Header */}
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-            <div>
-              <h1 style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.5px", color: "var(--text-primary)" }}>
-                Classification results
-              </h1>
-              <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 4 }}>
-                Batch run · Quantized ONNX · {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-              </p>
-            </div>
-            <button className="nav-link" onClick={() => onNavigate("classifier")}>
-              ← New classification
-            </button>
+      <div className="results-page" style={{ minHeight: "100vh", padding: "2rem 1.5rem" }}>
+        {/* Header */}
+        <div className="results-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+          <div>
+            <h1 className="results-title" style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.5px", color: "var(--text-primary)" }}>
+              Classification results
+            </h1>
+            <p style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 4 }}>
+              Batch run · Quantized ONNX · {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
           </div>
-
-          {/* Stats */}
-          <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap" }}>
-            {[
-              ["Images", results.length],
-              ["Avg confidence", avgConf + "%"],
-              ["Avg inference", avgInfer + " ms"],
-              ["High conf ≥80%", results.filter((r) => r.conf >= 80).length],
-              ["Low conf <50%", results.filter((r) => r.conf < 50).length],
-            ].map(([label, val]) => (
-              <div key={label} style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "8px 14px" }}>
-                <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 15, fontWeight: 500, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{val}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Filters */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem", flexWrap: "wrap" }}>
-            {[
-              ["all", "All"],
-              ["high", "High ≥80%"],
-              ["mid", "Mid 50–79%"],
-              ["low", "Low <50%"],
-            ].map(([key, label]) => (
-              <button key={key} className={`filter-btn ${filter === key ? "active" : ""}`} onClick={() => { setFilter(key); setSelectedId(null); }}>
-                {label}
-              </button>
-            ))}
-            <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)} style={{ marginLeft: "auto" }}>
-              <option value="time">Newest first</option>
-              <option value="conf-desc">Confidence ↓</option>
-              <option value="conf-asc">Confidence ↑</option>
-              <option value="name">Name A–Z</option>
-            </select>
-          </div>
-
-          {/* Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(185px, 1fr))", gap: 12 }}>
-            {loading && (
-              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem 0", color: "var(--text-tertiary)", fontSize: 13 }}>
-                Loading…
-              </div>
-            )}
-            {!loading && filtered.length === 0 && (
-              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem 0", color: "var(--text-tertiary)", fontSize: 13 }}>
-                No results found.
-              </div>
-            )}
-            {filtered.map((r, i) => (
-              <div
-                key={r.id}
-                className={`result-card card-anim ${selectedId === r.id ? "selected" : ""}`}
-                style={{ animationDelay: `${i * 0.03}s`, opacity: 0, animationFillMode: "forwards" }}
-                onClick={() => toggleSelect(r.id)}
-              >
-                <div style={{ height: 130, position: "relative", overflow: "hidden" }}>
-                  <ImageWithFallback id={r.id} label={r.label} />
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    <ConfBadge conf={r.conf} />
-                  </div>
-                  <div style={{
-                    position: "absolute", bottom: 8, left: 8,
-                    background: "rgba(0,0,0,0.55)", borderRadius: 4, padding: "2px 6px",
-                    fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)",
-                  }}>
-                    {r.infer} ms
-                  </div>
-                </div>
-                <div style={{ padding: "10px 12px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>{r.label}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.file}</div>
-                  <div style={{ height: 3, background: "var(--bg-raised)", borderRadius: 99, overflow: "hidden", marginTop: 8 }}>
-                    <div style={{ height: "100%", width: `${r.conf}%`, background: r.conf >= 80 ? "var(--conf-high-text)" : r.conf >= 50 ? "var(--conf-mid-text)" : "var(--conf-low-text)", borderRadius: 99 }} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <button className="nav-link" onClick={() => onNavigate("classifier")}>
+            ← New classification
+          </button>
         </div>
 
-        {/* Detail panel */}
-        {selected && (
-          <aside className="card-anim" style={{ width: 400, flexShrink: 0, position: "sticky", top: "2rem", background: "var(--bg-surface)", border: "1px solid var(--border-md)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-            <div style={{ height: 250, overflow: "hidden" }}>
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap" }}>
+          {[
+            ["Images", results.length],
+            ["Avg confidence", avgConf + "%"],
+            ["Avg inference", avgInfer + " ms"],
+            ["High conf ≥80%", results.filter((r) => r.conf >= 80).length],
+            ["Low conf <50%", results.filter((r) => r.conf < 50).length],
+          ].map(([label, val]) => (
+            <div key={label} style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "8px 14px" }}>
+              <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: 15, fontWeight: 500, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>{val}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem", flexWrap: "wrap" }}>
+          {[
+            ["all", "All"],
+            ["high", "High ≥80%"],
+            ["mid", "Mid 50–79%"],
+            ["low", "Low <50%"],
+          ].map(([key, label]) => (
+            <button key={key} className={`filter-btn ${filter === key ? "active" : ""}`} onClick={() => { setFilter(key); setSelectedId(null); }}>
+              {label}
+            </button>
+          ))}
+          <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)} style={{ marginLeft: "auto" }}>
+            <option value="time">Newest first</option>
+            <option value="conf-desc">Confidence ↓</option>
+            <option value="conf-asc">Confidence ↑</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
+
+        {/* Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+          {loading && (
+            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem 0", color: "var(--text-tertiary)", fontSize: 13 }}>
+              Loading…
+            </div>
+          )}
+          {!loading && filtered.length === 0 && (
+            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem 0", color: "var(--text-tertiary)", fontSize: 13 }}>
+              No results found.
+            </div>
+          )}
+          {filtered.map((r, i) => (
+            <div
+              key={r.id}
+              className={`result-card card-anim ${selectedId === r.id ? "selected" : ""}`}
+              style={{ animationDelay: `${i * 0.03}s`, opacity: 0, animationFillMode: "forwards" }}
+              onClick={() => toggleSelect(r.id)}
+            >
+              <div style={{ height: 130, position: "relative", overflow: "hidden" }}>
+                <ImageWithFallback id={r.id} label={r.label} />
+                <div style={{ position: "absolute", top: 8, right: 8 }}>
+                  <ConfBadge conf={r.conf} />
+                </div>
+                <div style={{
+                  position: "absolute", bottom: 8, left: 8,
+                  background: "rgba(0,0,0,0.55)", borderRadius: 4, padding: "2px 6px",
+                  fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "var(--font-mono)",
+                }}>
+                  {r.infer} ms
+                </div>
+              </div>
+              <div style={{ padding: "10px 12px" }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>{r.label}</div>
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.file}</div>
+                <div style={{ height: 3, background: "var(--bg-raised)", borderRadius: 99, overflow: "hidden", marginTop: 8 }}>
+                  <div style={{ height: "100%", width: `${r.conf}%`, background: r.conf >= 80 ? "var(--conf-high-text)" : r.conf >= 50 ? "var(--conf-mid-text)" : "var(--conf-low-text)", borderRadius: 99 }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail modal */}
+      {selected && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
+        >
+          <div className="modal-box">
+            <div style={{ height: 240, overflow: "hidden", flexShrink: 0 }}>
               <ImageWithFallback id={selected.id} label={selected.label} />
             </div>
             <div style={{ padding: "1rem" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.label}</div>
                   <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selected.file} · {selected.size}</div>
                 </div>
-                <button className="close-btn" style={{ marginLeft: 8, flexShrink: 0 }} onClick={() => setSelectedId(null)}><CloseIcon /></button>
+                <button className="close-btn" style={{ marginLeft: 8 }} onClick={() => setSelectedId(null)}><CloseIcon /></button>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: "1rem" }}>
@@ -245,9 +261,9 @@ export default function ClassificationResults({ onNavigate }) {
                 </div>
               ))}
             </div>
-          </aside>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
