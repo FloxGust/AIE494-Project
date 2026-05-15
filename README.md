@@ -19,6 +19,7 @@ docker-compose up --build
 | Frontend | http://localhost:3000       |
 | API      | http://localhost:6767       |
 | API Docs | http://localhost:6767/docs  |
+| Cloud API Endpoint| https://fias1h-aie494-api.hf.space/predict?model=quantized  |
 
 ---
 
